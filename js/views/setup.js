@@ -3,6 +3,8 @@
 // Wird beim ersten Start gezeigt und später aus den Einstellungen erneut geöffnet.
 
 import { h, alertDialog, stepper } from '../ui.js';
+import { icon } from '../icons.js';
+import { createDeviceChooser } from './devicechooser.js';
 import { saveShelfConfig } from '../db.js';
 import { ZONES, DEFAULT_SHELF_COUNT, DEFAULT_TOTAL_SLOTS } from '../constants.js';
 
@@ -35,15 +37,27 @@ export function createSetupView({ existing, onDone, onCancel, onImport }) {
 
   const root = h('div', { class: 'setup' });
 
+  // ---- Schritt 0: Gerät (nur beim ersten Start) -------------------------
+  function renderStepDevice() {
+    root.replaceChildren(
+      h('div', { class: 'setup-body step-enter' },
+        h('div', { class: 'setup-logo' }, icon('glass', 'logo')),
+        h('h1', {}, 'Willkommen bei Wine rack'),
+        h('p', { class: 'lead' }, 'Wähle zuerst dein Gerät. „Automatisch“ passt die Darstellung an die Bildschirmgröße an. Das lässt sich später in den Einstellungen ändern.'),
+        h('div', { class: 'card' }, createDeviceChooser())),
+      h('div', { class: 'setup-footer' },
+        onImport && h('button', { class: 'btn', onclick: onImport }, 'Aus Sicherung'),
+        h('button', { class: 'btn primary grow', onclick: renderStep1 }, 'Weiter')));
+  }
+
   // ---- Schritt 1: Anzahl ------------------------------------------------
   function renderStep1() {
     root.replaceChildren(
       h('div', { class: 'setup-body step-enter' },
-        !existing && h('div', { class: 'setup-logo' }, '🍷'),
-        h('h1', {}, existing ? 'Regal bearbeiten' : 'Willkommen bei Wine rack'),
+        h('h1', {}, existing ? 'Regal bearbeiten' : 'Regal einrichten'),
         h('p', { class: 'lead' }, existing
           ? 'Passe Fächer und Plätze deines Schranks an.'
-          : 'Richte zuerst dein Weinregal ein. Das dauert nur eine Minute und lässt sich später ändern.'),
+          : 'Das dauert nur eine Minute und lässt sich später ändern.'),
         h('div', { class: 'card setup-card' },
           h('div', { class: 'row' },
             h('div', {}, h('strong', {}, 'Anzahl der Fächer'),
@@ -54,10 +68,9 @@ export function createSetupView({ existing, onDone, onCancel, onImport }) {
               }
               shelves.length = n;
             }))),
-        !existing && onImport && h('button', { class: 'btn block restore', onclick: onImport }, 'Aus Sicherung wiederherstellen'),
       ),
       h('div', { class: 'setup-footer' },
-        existing && h('button', { class: 'btn', onclick: onCancel }, 'Abbrechen'),
+        existing ? h('button', { class: 'btn', onclick: onCancel }, 'Abbrechen') : h('button', { class: 'btn', onclick: renderStepDevice }, 'Zurück'),
         h('button', { class: 'btn primary grow', onclick: renderStep2 }, 'Weiter')));
   }
 
@@ -124,6 +137,6 @@ export function createSetupView({ existing, onDone, onCancel, onImport }) {
     onDone(config);
   }
 
-  renderStep1();
+  if (existing) renderStep1(); else renderStepDevice();
   return root;
 }

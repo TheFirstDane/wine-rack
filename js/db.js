@@ -15,6 +15,11 @@ const DB_NAME = 'wine-rack';
 
 let dbPromise = null;
 
+// Zählt Schreibzugriffe auf Weine und Regal. Das Tablet-Layout (Master links) merkt sich damit,
+// ob die linke Seite neu gezeichnet werden muss, nachdem rechts gespeichert wurde.
+let revision = 0;
+export const getRevision = () => revision;
+
 export function openDB() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
@@ -93,8 +98,8 @@ export function setMeta(key, value) {
 
 export const getAllWines = () => run('wines', 'readonly', (s) => s.getAll());
 export const getWine = (id) => run('wines', 'readonly', (s) => s.get(id));
-export const saveWine = (wine) => run('wines', 'readwrite', (s) => s.put(wine)); // liefert die id
-export const deleteWine = (id) => run('wines', 'readwrite', (s) => s.delete(id));
+export const saveWine = (wine) => { revision++; return run('wines', 'readwrite', (s) => s.put(wine)); }; // liefert die id
+export const deleteWine = (id) => { revision++; return run('wines', 'readwrite', (s) => s.delete(id)); };
 export const countWines = () => run('wines', 'readonly', (s) => s.count());
 
 // ---- Regal-Konfiguration -------------------------------------------------
@@ -127,6 +132,7 @@ export async function findOrphanedBottles(newConfig) {
 // Speichert die Konfiguration nur, wenn keine belegten Plätze wegfallen.
 // Ergebnis: { ok: true } oder { ok: false, orphaned: [...] }.
 export async function saveShelfConfig(config) {
+  revision++;
   const orphaned = await findOrphanedBottles(config);
   if (orphaned.length) return { ok: false, orphaned };
   await setMeta('shelfConfig', config);
@@ -140,6 +146,7 @@ export async function saveShelfConfig(config) {
 //   replace: true  → vorhandene Weine werden vorher gelöscht
 //   shelfConfig    → wenn angegeben, ersetzt es die Regal-Konfiguration
 export async function importData({ wines, shelfConfig = null, replace = false }) {
+  revision++;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(['wines', 'meta'], 'readwrite');

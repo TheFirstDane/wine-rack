@@ -1,7 +1,7 @@
 // Ablauf "Wein trinken": ggf. Flasche wählen, bestätigen, speichern.
 // Bei der letzten Flasche wird nach Bewertung und Notiz gefragt und der Wein archiviert.
 
-import { h, toast, dialog } from '../ui.js';
+import { h, toast, dialog, nextFrame } from '../ui.js';
 import { saveWine } from '../db.js';
 import { drinkChoices, drinkBottle, placeLabel } from '../logic.js';
 
@@ -32,7 +32,7 @@ function askTasting(wine) {
           h('button', { class: 'btn primary', onclick: () => close({ rating, notes: notes.value }) }, 'Ins Archiv verschieben'),
           h('button', { class: 'btn', onclick: () => close(null) }, 'Abbrechen'))));
     document.body.append(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
+    nextFrame(() => overlay.classList.add('show'));
   });
 }
 

@@ -2,7 +2,7 @@
 // Ablauf: Neue sw.js wird im Hintergrund installiert und wartet. Sobald sie bereit ist, zeigt die
 // App ein Banner. Erst nach Tipp auf "Aktualisieren" übernimmt sie, danach lädt die Seite neu.
 
-import { h } from './ui.js';
+import { h, nextFrame } from './ui.js';
 
 let registration = null;
 let updateRequested = false;
@@ -17,7 +17,7 @@ function showBanner(worker) {
       worker.postMessage({ type: 'SKIP_WAITING' });
     } }, 'Aktualisieren'));
   document.body.append(banner);
-  requestAnimationFrame(() => banner.classList.add('show'));
+  nextFrame(() => banner.classList.add('show'));
 }
 
 export async function initUpdates() {

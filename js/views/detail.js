@@ -7,6 +7,8 @@ import { openCropper } from './cropper.js';
 import { DEFAULT_CROP_PARAMS } from '../constants.js';
 import { placeLabel } from '../logic.js';
 import { photoImg, typeBadge, statusBadge, stars, fmtDate } from './wines.js';
+import { icon } from '../icons.js';
+import { homeHash } from '../nav.js';
 import { drinkWine } from './drink.js';
 
 const fmtMoney = (n) => (n == null ? '' : n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }));
@@ -79,7 +81,7 @@ export async function createDetailView(config, id) {
     if (!ok) return;
     await deleteWine(wine.id);
     toast('Wein gelöscht');
-    location.hash = archived ? '#/archiv' : '#/weine';
+    location.hash = homeHash(archived ? '#/archiv' : '#/weine');
   }
 
   return h('div', { class: 'view' },
@@ -97,7 +99,7 @@ export async function createDetailView(config, id) {
     h('div', { class: 'detail-badges' }, typeBadge(wine.type),
       archived ? h('span', { class: 'status archived' }, 'Getrunken') : statusBadge(wine)),
 
-    !archived && h('button', { class: 'btn primary big block', onclick: () => drinkWine(wine, config) }, '🍷 Wein trinken'),
+    !archived && h('button', { class: 'btn primary big block', onclick: () => drinkWine(wine, config) }, icon('glass'), 'Wein trinken'),
 
     !archived && h('div', { class: 'card' },
       h('div', { class: 'row' }, h('strong', {}, 'Flaschen'), h('strong', {}, String(wine.count))),

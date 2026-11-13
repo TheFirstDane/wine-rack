@@ -15,6 +15,7 @@ Reines HTML, CSS und JavaScript (ES-Module), kein Build-Schritt, keine Abhängig
 | `js/logic.js`, `js/backup.js`, `js/migrations.js` | reine Logik (ohne Browser, in Node getestet) |
 | `js/db.js` | IndexedDB-Schicht |
 | `js/update.js`, `sw.js` | Service Worker und Update-Mechanismus |
+| `js/device.js`, `js/nav.js` | Geräteprofile (Handy kompakt, Handy groß, Tablet) und Navigationszustand |
 | `manifest.webmanifest`, `icons/` | PWA-Grundlage |
 | `tests/` | Tests (reines Node.js) |
 | `tools/` | Icons erzeugen, Version erhöhen |
@@ -59,10 +60,26 @@ Die Fotos und Weine liegen nie im Repository, sondern nur auf dem jeweiligen Ger
 
 1. Die Adresse in **Safari** öffnen (nicht in Chrome oder in einer App-internen Ansicht).
 2. Teilen-Symbol antippen, **Zum Home-Bildschirm**, **Hinzufügen**.
-3. Die App über das neue Symbol auf dem Home-Bildschirm starten. Beim ersten Start führt der Assistent durch die Einrichtung des Regals.
+3. Die App über das neue Symbol auf dem Home-Bildschirm starten. Beim ersten Start wählst du zuerst das Gerät (siehe unten, „Automatisch“ passt fast immer) und richtest dann das Regal ein.
 4. Einmal mit Internet starten und kurz warten, bis alles geladen ist. Danach funktioniert die App auch im Flugmodus.
 
 Hinweis: Die vom Home-Bildschirm gestartete App hat einen **eigenen Speicher**, getrennt von Safari. Daten, die man vorher im Safari-Tab angelegt hat, tauchen dort nicht auf. Am besten direkt die Home-Bildschirm-App benutzen.
+
+## iPhone und iPad: Geräteprofile
+
+Die App passt sich dem Gerät an. Einstellungen, **Gerät und Darstellung** (oben), bietet vier Karten, die sofort wirken:
+
+| Auswahl | Gedacht für | Darstellung |
+|---|---|---|
+| **Automatisch** (empfohlen) | alle | erkennt das Profil an der Fenstergröße |
+| **Handy kompakt** | iPhone 13 und ähnliche (390 × 844 pt) | Schrift 16 px, untere Tab-Leiste |
+| **Handy groß** | iPhone 18 Pro Max und ähnliche (440 × 956 pt) | Schrift 17 px, untere Tab-Leiste |
+| **Tablet** | iPad Pro 13 Zoll (1032 × 1376 pt, quer 1376 × 1032 pt) | Schrift 18 px, Seitenleiste, Regal links und Detail rechts |
+
+- **Automatik**: Sie nimmt die kürzere Fensterseite (bis 410 pt Handy kompakt, 411 bis 599 pt Handy groß, ab 600 pt Tablet) und aktualisiert beim Drehen live. Der User-Agent spielt keine Rolle (iPadOS meldet sich wie ein Mac).
+- **Falsche Wahl**: „Tablet“ auf einem Handy fällt auf das Handy-Layout zurück (mit Hinweis). Ein Handy-Profil auf dem iPad bleibt eine zentrierte Spalte, nichts wird gestreckt oder abgeschnitten.
+- **Nur lokal**: Die Auswahl liegt nur auf dem jeweiligen Gerät (`localStorage`). Sie ist nicht im Backup und wird beim Import nicht überschrieben, ein Backup lässt sich also vom iPhone auf das iPad übertragen.
+- **Technik**: `js/device.js` setzt `data-device` am `<html>`-Element; das CSS (`css/style.css`, Abschnitt „Geräteprofile“) steuert alles über Variablen und `rem`. Neue Layout-Anpassungen gehören dorthin.
 
 ## Update einspielen
 
@@ -85,7 +102,7 @@ Die App merkt sich das Datum und weist auf der Regal- und Weinliste-Seite darauf
 
 **Wiederherstellen:** Einstellungen, **Backup importieren**, Datei wählen. Die App prüft Format und Versionsnummer und zeigt, was in der Datei steht. Dann gibt es drei Fälle:
 
-- *Gerät ohne Weine* (z. B. nach Neuinstallation): Die Sicherung wird komplett übernommen. Beim allerersten Start geht das auch direkt im Einrichtungsassistenten über **Aus Sicherung wiederherstellen**.
+- *Gerät ohne Weine* (z. B. nach Neuinstallation): Die Sicherung wird komplett übernommen. Beim allerersten Start geht das auch direkt im Einrichtungsassistenten über **Aus Sicherung** (erste Seite, neben „Weiter“).
 - *Gerät mit Weinen, Zusammenführen (empfohlen)*: Vorhandene Weine bleiben unverändert, fehlende werden ergänzt. Belegte Lagerplätze werden nicht überschrieben.
 - *Gerät mit Weinen, Alles ersetzen*: Löscht die jetzigen Daten, nur nach einer zweiten Rückfrage.
 

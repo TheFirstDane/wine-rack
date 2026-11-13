@@ -1,4 +1,4 @@
-// Einstellungen: Regal-Konfiguration, Backup (Export/Import), Update, Info.
+// Einstellungen: Gerät und Darstellung, Regal-Konfiguration, Backup (Export/Import), Update, Info.
 
 import { h, toast } from '../ui.js';
 import { getMeta, SCHEMA_VERSION } from '../db.js';
@@ -6,6 +6,7 @@ import { ZONES, APP_VERSION } from '../constants.js';
 import { backupStatus } from '../backup.js';
 import { exportBackup, importFromPicker } from '../backup-flow.js';
 import { checkForUpdate } from '../update.js';
+import { createDeviceChooser } from './devicechooser.js';
 
 export async function createSettingsView(config, { onEditShelf }) {
   const total = config.shelves.reduce((a, s) => a + s.slots, 0);
@@ -37,6 +38,10 @@ export async function createSettingsView(config, { onEditShelf }) {
 
   return h('div', { class: 'view' },
     h('header', { class: 'view-header' }, h('h1', {}, 'Einstellungen')),
+
+    h('h2', { class: 'section-title' }, 'Gerät und Darstellung'),
+    h('div', { class: 'card' }, createDeviceChooser(),
+      h('p', { class: 'muted small' }, 'Gilt nur für dieses Gerät und ist nicht Teil des Backups.')),
 
     h('h2', { class: 'section-title' }, 'Regal'),
     h('div', { class: 'card' },

@@ -7,7 +7,7 @@
 //   { retake: true } – "Neu aufnehmen"
 //   null             – abgebrochen (✕)
 
-import { h } from '../ui.js';
+import { h, nextFrame } from '../ui.js';
 import { normalizeCrop, MAX_CROP_ZOOM } from '../logic.js';
 import { DEFAULT_CROP_PARAMS } from '../constants.js';
 
@@ -113,7 +113,7 @@ export function openCropper({ blob, params = DEFAULT_CROP_PARAMS }) {
         h('button', { class: 'btn primary big grow', type: 'button', onclick: () => close({ params: { cx: view.cx, cy: view.cy, zoom: view.zoom } }) }, 'Übernehmen')));
 
     document.body.append(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
+    nextFrame(() => overlay.classList.add('show'));
 
     img.decode().catch(() => {}).then(() => {
       w = img.naturalWidth;

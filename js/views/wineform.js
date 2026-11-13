@@ -4,6 +4,7 @@ import { h, toast, dialog, stepper, blobUrl } from '../ui.js';
 import { getAllWines, saveWine } from '../db.js';
 import { resizeImage, renderCrop } from '../image.js';
 import { openCropper } from './cropper.js';
+import { icon } from '../icons.js';
 import { WINE_TYPES, DEFAULT_CROP_PARAMS } from '../constants.js';
 import {
   BOTTLE_SIZES, DEFAULT_BOTTLE_SIZE, validateWineInput, findMatches, mergeInto,
@@ -57,7 +58,7 @@ export async function createWineForm({ config, existing, prefillPlace }) {
   const roundPreview = h('img', { class: 'round-preview', alt: 'Runder Ausschnitt des Etiketts' });
   const emptyPhoto = h('div', { class: 'photo-empty' },
     h('button', { type: 'button', class: 'photo-btn', onclick: () => cameraInput.click() },
-      h('span', { class: 'photo-icon' }, '📷'), h('span', { class: 'photo-cta' }, 'Foto aufnehmen'), photoStatus),
+      h('span', { class: 'photo-icon' }, icon('camera')), h('span', { class: 'photo-cta' }, 'Foto aufnehmen'), photoStatus),
     h('button', { type: 'button', class: 'btn block', onclick: () => libraryInput.click() }, 'Aus Fotos wählen'));
   const filledPhoto = h('div', { class: 'photo-filled' },
     roundPreview,
@@ -76,11 +77,15 @@ export async function createWineForm({ config, existing, prefillPlace }) {
 
   // Zuschnitt-Schritt für ein Foto; "Neu aufnehmen" öffnet die Kamera erneut.
   // Liefert true, wenn übernommen wurde.
+  // `pending` merkt sich, solange ein Zuschnitt erzeugt wird; "Einlagern" wartet darauf.
+  let pending = null;
   async function cropStep(photoBlob, params) {
     const res = await openCropper({ blob: photoBlob, params });
     if (!res) return false;
     if (res.retake) { cameraInput.click(); return false; }
-    const { blob, params: finalParams } = await renderCrop(photoBlob, res.params);
+    const work = renderCrop(photoBlob, res.params);
+    pending = work.catch(() => {});
+    const { blob, params: finalParams } = await work;
     state.photo = photoBlob;
     state.crop = blob;
     state.cropParams = finalParams;
@@ -153,6 +158,7 @@ export async function createWineForm({ config, existing, prefillPlace }) {
 
   async function onSubmit(e) {
     e.preventDefault();
+    await pending; // Zuschnitt noch in Arbeit? Erst fertig werden lassen
     Object.keys(errorEls).forEach((k) => showError(k, ''));
     const raw = { photo: state.photo, crop: state.crop, cropParams: state.cropParams, type: state.type, origin: state.origin, count: state.count, places: picker.getPlaces() };
     for (const [k, el] of Object.entries(inputs)) raw[k] = el.value;

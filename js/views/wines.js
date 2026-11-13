@@ -2,6 +2,7 @@
 // Außerdem gemeinsame Bausteine für Karten, die auch Archiv und Detail nutzen.
 
 import { h, blobUrl } from '../ui.js';
+import { icon } from '../icons.js';
 import { getAllWines } from '../db.js';
 import { WINE_TYPES } from '../constants.js';
 import { drinkingStatus, filterWines, sortWines, uniqueCountries, WINDOW_OPTIONS, SORT_OPTIONS } from '../logic.js';
@@ -21,9 +22,8 @@ export const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.
 
 // Kleiner Helfer: Blob → Bild-Element (die URL wird mit der Ansicht wieder freigegeben, siehe ui.js)
 export function photoImg(blob, alt, cls = '') {
-  const img = h('img', { class: cls, alt, loading: 'lazy' });
-  if (blob) img.src = blobUrl(blob);
-  return img;
+  if (!blob) return h('div', { class: `${cls} no-photo`, role: 'img', 'aria-label': `Kein Foto: ${alt}` }); // statt kaputtem Bild
+  return h('img', { class: cls, alt, loading: 'lazy', src: blobUrl(blob) });
 }
 
 export function typeBadge(typeKey) {
@@ -53,7 +53,7 @@ export async function createWinesView() {
 
   if (!all.length) {
     return h('div', { class: 'view' }, header,
-      h('div', { class: 'empty' }, h('div', { class: 'empty-icon' }, '🍾'),
+      h('div', { class: 'empty' }, h('div', { class: 'empty-icon' }, icon('bottle')),
         h('p', {}, 'Lagere deinen ersten Wein ein. Ein Foto vom Etikett genügt für den Anfang.')),
       addBtn);
   }
@@ -98,8 +98,8 @@ export async function createWinesView() {
       list.replaceChildren(h('div', { class: 'empty' }, h('p', {}, 'Kein Wein passt zu Suche und Filtern.')));
       return;
     }
-    list.replaceChildren(...shown.map((w, i) => h('a', { class: 'wine-card', href: `#/wein/${w.id}`, style: { '--i': Math.min(i, 12) } },
-      photoImg(w.photo, w.name, 'wine-thumb'),
+    list.replaceChildren(...shown.map((w, i) => h('a', { class: 'wine-card', href: `#/wein/${w.id}`, 'data-wine-id': w.id, style: { '--i': Math.min(i, 12) } },
+      photoImg(w.crop || w.photo, w.name, 'wine-thumb'),
       h('div', { class: 'wine-card-body' },
         h('strong', { class: 'wine-name' }, w.name),
         h('span', { class: 'muted small' }, [w.winery, w.vintage].filter(Boolean).join(' · ') || 'ohne Weingut'),

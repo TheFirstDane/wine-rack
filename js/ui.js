@@ -1,5 +1,14 @@
 // Kleine UI-Helfer ohne Framework.
 
+// Führt fn im nächsten Frame aus (damit CSS-Übergänge starten). Rückfall per Timer, falls der Browser
+// keine Frames zeichnet (z. B. Seite im Hintergrund): sonst bliebe ein Dialog unsichtbar.
+export function nextFrame(fn) {
+  let done = false;
+  const run = () => { if (!done) { done = true; fn(); } };
+  requestAnimationFrame(run);
+  setTimeout(run, 60);
+}
+
 // h('div', { class: 'x', onclick: fn }, 'Text', childElement) → DOM-Element
 export function h(tag, attrs, ...children) {
   const el = document.createElement(tag);
@@ -26,7 +35,7 @@ export function h(tag, attrs, ...children) {
 export function toast(message) {
   const el = h('div', { class: 'toast', role: 'status' }, message);
   document.body.append(el);
-  requestAnimationFrame(() => el.classList.add('show'));
+  nextFrame(() => el.classList.add('show'));
   setTimeout(() => {
     el.classList.remove('show');
     setTimeout(() => el.remove(), 300);
@@ -52,7 +61,7 @@ export function dialog({ title, message, buttons }) {
             onclick: () => close(b.value),
           }, b.label)))));
     document.body.append(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
+    nextFrame(() => overlay.classList.add('show'));
   });
 }
 
@@ -78,20 +87,26 @@ export function stepper(value, min, max, onChange = () => {}) {
 }
 
 // ---- Object-URLs für Bilder (Blobs) ---------------------------------------------------
-// blobUrl(blob) liefert pro Blob immer dieselbe URL, solange die aktuelle Ansicht lebt.
-// rotateUrls() wird beim Ansichtswechsel aufgerufen: neue Ansicht beginnt mit leerem Pool, die
-// zurückgegebene Funktion gibt die URLs der alten Ansicht frei (erst aufrufen, wenn sie ersetzt ist).
-let urlPool = new Map();
+// blobUrl(blob) liefert pro Blob dieselbe URL, solange der Bereich lebt, in dem sie entstand.
+// Bereiche ("scopes"): Handy 'view'; Tablet 'master' (links) und 'detail' (rechts), damit eine
+// Seite neu gebaut werden kann, ohne dass die Bilder der anderen kaputtgehen.
+// Ablauf beim Aufbau eines Bereichs:  const free = rotateUrls(scope);  useUrlScope(scope);  …bauen…;
+// nach dem Austausch im DOM: free() gibt die URLs der alten Ansicht frei.
+const pools = { view: new Map(), master: new Map(), detail: new Map() };
+let activeScope = 'view';
+
+export function useUrlScope(scope) { activeScope = scope; }
 
 export function blobUrl(blob) {
   if (!blob) return '';
-  let url = urlPool.get(blob);
-  if (!url) { url = URL.createObjectURL(blob); urlPool.set(blob, url); }
+  const pool = pools[activeScope];
+  let url = pool.get(blob);
+  if (!url) { url = URL.createObjectURL(blob); pool.set(blob, url); }
   return url;
 }
 
-export function rotateUrls() {
-  const old = urlPool;
-  urlPool = new Map();
+export function rotateUrls(scope = 'view') {
+  const old = pools[scope];
+  pools[scope] = new Map();
   return () => { for (const url of old.values()) URL.revokeObjectURL(url); };
 }

@@ -1,7 +1,7 @@
 // Filterblatt für die Regalansicht: Bottom Sheet (von unten, daumenfreundlich).
 // Änderungen wirken sofort im Regal dahinter; "N Weine anzeigen" schließt das Blatt.
 
-import { h } from '../ui.js';
+import { h, nextFrame } from '../ui.js';
 import { WINE_TYPES } from '../constants.js';
 import { EMPTY_SHELF_FILTER, placeOptions } from '../logic.js';
 
@@ -91,5 +91,5 @@ export function openFilterSheet({ wines, get, set, countHits }) {
   document.body.append(overlay);
   document.body.classList.add('no-scroll');
   sync();
-  requestAnimationFrame(() => overlay.classList.add('show'));
+  nextFrame(() => overlay.classList.add('show'));
 }

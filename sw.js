@@ -6,7 +6,7 @@
 // Hintergrund und wartet; die App zeigt "Neue Version verfügbar", erst nach Tipp auf
 // "Aktualisieren" wird umgeschaltet. Die Daten (IndexedDB) sind vom Cache unabhängig und bleiben erhalten.
 
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 const CACHE_PREFIX = 'wine-rack-v';
 const CACHE_NAME = `${CACHE_PREFIX}${VERSION}`;
 
@@ -22,14 +22,18 @@ const ASSETS = [
   'js/constants.js',
   'js/crops.js',
   'js/db.js',
+  'js/device.js',
+  'js/icons.js',
   'js/image.js',
   'js/logic.js',
   'js/migrations.js',
+  'js/nav.js',
   'js/ui.js',
   'js/update.js',
   'js/views/archive.js',
   'js/views/cropper.js',
   'js/views/detail.js',
+  'js/views/devicechooser.js',
   'js/views/drink.js',
   'js/views/filtersheet.js',
   'js/views/notices.js',

@@ -1,6 +1,6 @@
 // Gemeinsame Konstanten der App.
 
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.6.0';
 
 // Zuschnitt: Mitte des Fotos, kein Zoom (Bildausschnitt = größtmögliches Quadrat)
 export const DEFAULT_CROP_PARAMS = { cx: 0.5, cy: 0.5, zoom: 1 };

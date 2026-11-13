@@ -41,7 +41,7 @@ Haken setzen, wenn es klappt; sonst aufschreiben, was passiert ist.
 - [ ] Notiere Anzahl der Weine und Flaschen (Weine-Tab)
 - [ ] App-Symbol lange drücken, **App entfernen**, vom Home-Bildschirm löschen
 - [ ] Wieder in Safari öffnen, erneut **Zum Home-Bildschirm**
-- [ ] Beim ersten Start: **Aus Sicherung wiederherstellen**, Datei aus Dateien wählen
+- [ ] Beim ersten Start: **Aus Sicherung** (unten auf der ersten Seite), Datei aus Dateien wählen
 - [ ] Zusammenfassung stimmt, **Wiederherstellen**: Regal, Weine, Archiv, Fotos, Lagerplätze wie vorher
 - [ ] Zahlen stimmen mit der Notiz überein
 - [ ] Erneut importieren: **Zusammenführen** meldet „0 hinzugefügt, alle schon vorhanden“
@@ -78,5 +78,23 @@ Ergebnis, Version und Auffälligkeiten hier notieren:
 - [ ] Ohne Treffer: „Kein Wein gefunden“ mit „Filter zurücksetzen“
 - [ ] Suche bleibt beim Tab-Wechsel erhalten und ist nach dem Neustart der App leer
 - [ ] **Backup**: Export, App löschen, Import: Zuschnitte sind wieder da; eine alte Backup-Datei (0.4.x) lässt sich importieren
+- [ ] Flugmodus: alles funktioniert weiter, auch nach dem Update
+
+## 9. Neu in 0.6.0: Geräteprofile (iPhone und iPad)
+Zuerst auf dem iPhone, dann auf dem iPad. Notiere das Gerät.
+
+- [ ] Erster Start: Seite **Gerät und Darstellung** mit vier Karten; „Automatisch“ ist gewählt, unten steht das erkannte Layout
+- [ ] Einstellungen, ganz oben: **Gerät und Darstellung**. Automatisch zeigt **Handy kompakt** (iPhone 13), **Handy groß** (iPhone 18 Pro Max), **Tablet** (iPad Pro 13 Zoll)
+- [ ] Jede Karte wählen: Layout wechselt sofort ohne Neustart. Nach Schließen und erneutem Öffnen der App bleibt die Wahl erhalten
+- [ ] **iPhone**: untere Tab-Leiste, nichts unter der Dynamic Island, nichts unter dem Home-Indicator, kein seitliches Scrollen
+- [ ] iPhone quer: Layout bleibt Handy (kein Tablet), nichts abgeschnitten, Tab-Leiste flach und sichtbar
+- [ ] **iPad**: Seitenleiste links, Regal links und Wein-Detail rechts. Wein antippen: Detail rechts, das Regal bleibt stehen und markiert den Wein
+- [ ] iPad: Weine und Archiv als Karten in zwei bis drei Spalten; Wein antippen teilt die Ansicht
+- [ ] iPad drehen (hoch und quer), auch im laufenden Betrieb: Layout passt sich an, Regal-Kreise ordnen sich neu, nichts springt zurück
+- [ ] iPad: Dialoge (Trinken, Löschen) erscheinen zentriert, das Filterblatt ebenso; auf dem iPhone kommen sie von unten
+- [ ] iPad: Foto im Detail ist scharf und groß; Kreise im Regal sind scharf
+- [ ] **Falsche Wahl**: auf dem iPhone „Tablet“ wählen: Hinweis „zu klein für das Tablet-Layout“, Handy-Layout bleibt. Auf dem iPad „Handy kompakt“ wählen: zentrierte Spalte, nichts gestreckt, kein seitlicher Balken
+- [ ] Alle Tippflächen mindestens 44 pt (Knöpfe, Chips, Regal-Kreise, Tab-Leiste)
+- [ ] **Backup iPhone → iPad**: Export auf dem iPhone, Import auf dem iPad: Weine, Fotos und Zuschnitte da, die Geräteauswahl des iPads ist unverändert
 - [ ] Flugmodus: alles funktioniert weiter, auch nach dem Update
 

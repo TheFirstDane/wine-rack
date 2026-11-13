@@ -14,6 +14,7 @@ import {
 import { STATUS } from './wines.js';
 import { drinkWine } from './drink.js';
 import { openFilterSheet } from './filtersheet.js';
+import { icon } from '../icons.js';
 
 const typeVar = Object.fromEntries(WINE_TYPES.map((t) => [t.key, t.cssVar]));
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -22,10 +23,6 @@ const freshFilter = () => ({ ...EMPTY_SHELF_FILTER, types: [] });
 // Suche und Filter bleiben beim Wechsel zwischen den Ansichten erhalten,
 // und werden beim Neustart der App zurückgesetzt (Modul wird neu geladen).
 let shelfFilter = freshFilter();
-
-// Mindestgröße einer Tippfläche und Abstand im Raster (siehe css/style.css, .slots)
-const MIN_SLOT = 44;
-const SLOT_GAP = 8;
 
 export async function createShelfView(config) {
   const wines = (await getAllWines()).filter((w) => w.status !== 'archived');
@@ -60,7 +57,9 @@ export async function createShelfView(config) {
 
   // ---- Schaltflächen ----
   const banner = h('div', { class: 'drink-banner', hidden: true }, 'Tippe die Flasche, die du entnimmst.');
-  const drinkBtn = h('button', { class: 'btn big', onclick: () => setDrinkMode(!drinkMode) }, '🍷 Trinken');
+  const drinkBtn = h('button', { class: 'btn big', onclick: () => setDrinkMode(!drinkMode) });
+  const setDrinkLabel = (on) => drinkBtn.replaceChildren(...(on ? ['Abbrechen'] : [icon('glass'), 'Trinken']));
+  setDrinkLabel(false);
   const root = h('div', { class: 'view' });
 
   function setDrinkMode(on) {
@@ -68,7 +67,7 @@ export async function createShelfView(config) {
     drinkMode = on;
     root.classList.toggle('drink-mode', on);
     banner.hidden = !on;
-    drinkBtn.textContent = on ? 'Abbrechen' : '🍷 Trinken';
+    setDrinkLabel(on);
   }
 
   function onSlot(shelf, slot, wine) {
@@ -92,6 +91,7 @@ export async function createShelfView(config) {
       class: 'slot' + (wine ? ' filled' : '') + (image ? ' has-img' : ''),
       style: wine ? { '--slot-color': `var(${typeVar[wine.type] || '--type-other'})` } : null,
       'data-status': status,
+      'data-wine-id': wine ? wine.id : null,
       'aria-label': wine ? `${wine.name}, Platz ${slot}${statusText}` : `Platz ${slot}, frei`,
       onclick: () => onSlot(shelf, slot, wine),
     }, image ? h('img', { class: 'slot-img', src: blobUrl(image), alt: '', draggable: 'false' }) : String(slot));
@@ -124,14 +124,18 @@ export async function createShelfView(config) {
   });
   const zonesBox = h('div', { class: 'zones' }, zones);
 
-  // Spaltenzahl je Fach: so viele Plätze pro Zeile, wie mit mindestens 44 px Breite passen; die Plätze
-  // verteilen sich gleichmäßig auf die Zeilen (9 Plätze → 5 + 4 statt 6 + 3). Kein seitliches Scrollen.
+  // Spaltenzahl je Fach: so viele Plätze pro Zeile, wie mit der Mindestgröße des Profils (--slot-min, nie unter
+  // 44 pt) passen; die Plätze verteilen sich gleichmäßig auf die Zeilen (9 Plätze → 5 + 4 statt 6 + 3).
+  // Die Kreise füllen dann die Zeile bis höchstens --slot-max. Kein seitliches Scrollen.
   function layoutSlots() {
     for (const grid of slotGrids) {
       const width = grid.clientWidth;
-      if (!width) continue;
+      const first = grid.firstElementChild;
+      if (!width || !first) continue;
+      const min = parseFloat(getComputedStyle(first).minHeight) || 44;
+      const gap = parseFloat(getComputedStyle(grid).columnGap) || 8;
       const count = Number(grid.dataset.count);
-      const maxCols = Math.max(1, Math.floor((width + SLOT_GAP) / (MIN_SLOT + SLOT_GAP)));
+      const maxCols = Math.max(1, Math.floor((width + gap) / (min + gap)));
       const rows = Math.ceil(count / maxCols);
       grid.style.setProperty('--cols', String(Math.ceil(count / rows)));
     }
@@ -139,6 +143,12 @@ export async function createShelfView(config) {
   // Läuft, sobald die Ansicht im Dokument ist (Ereignis aus app.js), und bei jeder Größenänderung (Drehen des Geräts)
   root.addEventListener('wr:attached', layoutSlots);
   new ResizeObserver(layoutSlots).observe(root);
+  // Zusätzlich bei jeder Größen-/Ausrichtungsänderung (Meldung aus device.js); räumt sich selbst auf
+  const onLayout = () => {
+    if (root.isConnected) layoutSlots();
+    else window.removeEventListener('wr:layout', onLayout);
+  };
+  window.addEventListener('wr:layout', onLayout);
 
   // ---- Suche und Filter ----
   const clearBtn = h('button', { class: 'search-clear', type: 'button', hidden: true, 'aria-label': 'Suche löschen',
