@@ -1,6 +1,10 @@
 // Gemeinsame Konstanten der App.
 
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.5.0';
+
+// Zuschnitt: Mitte des Fotos, kein Zoom (Bildausschnitt = größtmögliches Quadrat)
+export const DEFAULT_CROP_PARAMS = { cx: 0.5, cy: 0.5, zoom: 1 };
+export const CROP_SIZE = 400;
 
 // Der Schrank (Klarstein Vinamour 77 Duo) fasst 77 Flaschen.
 export const DEFAULT_TOTAL_SLOTS = 77;

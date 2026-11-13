@@ -9,11 +9,26 @@
 //   3. Falls sich Speicher/Indizes ändern: in db.js migrate() einen "if (oldVersion < 2)"-Block ergänzen.
 // Dieselben Schritte laufen beim Update der App (IndexedDB) und beim Import älterer Backups.
 
-export const SCHEMA_VERSION = 1;
+import { DEFAULT_CROP_PARAMS } from './constants.js';
+
+export const SCHEMA_VERSION = 2;
 
 // STEPS[n] hebt { wines, shelfConfig } von Version n auf n + 1.
 // Schritte dürfen die Eingabe nicht verändern, sondern liefern neue Objekte.
-export const STEPS = {};
+export const STEPS = {
+  // Version 1 → 2: Wein bekommt einen runden Bildausschnitt fürs Regal.
+  //   crop        – quadratisches Bild (Blob), wird nach dem Start im Hintergrund aus dem Foto erzeugt
+  //   cropParams  – gewählter Ausschnitt { cx, cy, zoom }, Vorgabe: Mitte
+  // Vorhandene Felder bleiben unangetastet; schon gesetzte neue Felder werden nicht überschrieben.
+  1: (data) => ({
+    ...data,
+    wines: (data.wines || []).map((w) => ({
+      ...w,
+      crop: w.crop ?? null,
+      cropParams: w.cropParams ?? { ...DEFAULT_CROP_PARAMS },
+    })),
+  }),
+};
 
 export function migrateData(data, from, to = SCHEMA_VERSION, steps = STEPS) {
   if (from > to) {

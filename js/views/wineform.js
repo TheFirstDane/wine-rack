@@ -1,9 +1,10 @@
 // Formular "Wein einlagern" (neu) und "Wein bearbeiten" (vorhandenen Wein ändern).
 
-import { h, toast, dialog, stepper } from '../ui.js';
+import { h, toast, dialog, stepper, blobUrl } from '../ui.js';
 import { getAllWines, saveWine } from '../db.js';
-import { resizeImage } from '../image.js';
-import { WINE_TYPES } from '../constants.js';
+import { resizeImage, renderCrop } from '../image.js';
+import { openCropper } from './cropper.js';
+import { WINE_TYPES, DEFAULT_CROP_PARAMS } from '../constants.js';
 import {
   BOTTLE_SIZES, DEFAULT_BOTTLE_SIZE, validateWineInput, findMatches, mergeInto,
   validatePlaces, firstFreeSlots, todayISO,
@@ -18,7 +19,9 @@ export async function createWineForm({ config, existing, prefillPlace }) {
 
   // Aktueller Zustand des Formulars
   const state = {
-    photo: existing?.photo || null,
+    photo: existing?.photo || null,       // verkleinertes Foto (bleibt, damit der Zuschnitt neu gemacht werden kann)
+    crop: existing?.crop || null,         // quadratischer Ausschnitt fürs Regal
+    cropParams: existing?.cropParams || { ...DEFAULT_CROP_PARAMS },
     type: existing?.type || null,
     origin: existing?.origin || 'bought',
     count: existing?.count || 1,
@@ -44,38 +47,68 @@ export async function createWineForm({ config, existing, prefillPlace }) {
   }), opts);
   const area = (key, label) => field(key, label, h('textarea', { class: 'input', rows: '3', maxlength: '2000' }, existing?.[key] ?? ''));
 
-  // ---- Foto ----
-  const preview = h('img', { class: 'photo-preview', alt: 'Foto des Weins', hidden: true });
+  // ---- Foto und Zuschnitt ----
+  // Zwei Eingaben: Kamera (capture) und Auswahl aus den Fotos. Nach der Aufnahme folgt der Zuschnitt.
+  const cameraInput = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
+  const libraryInput = h('input', { type: 'file', accept: 'image/*', hidden: true });
   const photoStatus = h('span', { class: 'muted small' }, 'Pflichtfeld');
-  const fileInput = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
-  const photoBtn = h('button', { type: 'button', class: 'photo-btn', onclick: () => fileInput.click() },
-    preview,
-    h('span', { class: 'photo-cta' }, h('span', { class: 'photo-icon' }, '📷'), h('span', {}, 'Foto aufnehmen')),
-    photoStatus);
   errorEls.photo = h('div', { class: 'field-error', role: 'alert' });
 
-  function setPhoto(blob) {
-    state.photo = blob;
-    preview.src = URL.createObjectURL(blob);
-    preview.hidden = false;
-    photoBtn.classList.add('has-photo');
-    photoStatus.textContent = 'Tippen zum Ersetzen';
-    showError('photo', '');
-  }
-  if (state.photo) setPhoto(state.photo);
+  const roundPreview = h('img', { class: 'round-preview', alt: 'Runder Ausschnitt des Etiketts' });
+  const emptyPhoto = h('div', { class: 'photo-empty' },
+    h('button', { type: 'button', class: 'photo-btn', onclick: () => cameraInput.click() },
+      h('span', { class: 'photo-icon' }, '📷'), h('span', { class: 'photo-cta' }, 'Foto aufnehmen'), photoStatus),
+    h('button', { type: 'button', class: 'btn block', onclick: () => libraryInput.click() }, 'Aus Fotos wählen'));
+  const filledPhoto = h('div', { class: 'photo-filled' },
+    roundPreview,
+    h('div', { class: 'photo-actions' },
+      h('button', { type: 'button', class: 'btn', onclick: () => editCrop() }, 'Zuschnitt ändern'),
+      h('button', { type: 'button', class: 'btn', onclick: () => cameraInput.click() }, 'Neues Foto'),
+      h('button', { type: 'button', class: 'btn', onclick: () => libraryInput.click() }, 'Aus Fotos')));
 
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files[0];
+  function showPhotoState() {
+    const has = !!state.photo;
+    emptyPhoto.hidden = has;
+    filledPhoto.hidden = !has;
+    // Rundes Vorschaubild: Zuschnitt, sonst (kurz nach der Migration) das Foto mittig angeschnitten
+    if (has) roundPreview.src = blobUrl(state.crop || state.photo);
+  }
+
+  // Zuschnitt-Schritt für ein Foto; "Neu aufnehmen" öffnet die Kamera erneut.
+  // Liefert true, wenn übernommen wurde.
+  async function cropStep(photoBlob, params) {
+    const res = await openCropper({ blob: photoBlob, params });
+    if (!res) return false;
+    if (res.retake) { cameraInput.click(); return false; }
+    const { blob, params: finalParams } = await renderCrop(photoBlob, res.params);
+    state.photo = photoBlob;
+    state.crop = blob;
+    state.cropParams = finalParams;
+    showPhotoState();
+    showError('photo', '');
+    return true;
+  }
+
+  async function editCrop() {
+    if (!state.photo) return;
+    try { await cropStep(state.photo, state.cropParams); } catch (err) { showError('photo', err.message); }
+  }
+
+  async function onFile(input) {
+    const file = input.files[0];
+    input.value = '';
     if (!file) return;
     photoStatus.textContent = 'Foto wird verkleinert …';
     try {
-      setPhoto(await resizeImage(file));
+      const photoBlob = await resizeImage(file);
+      await cropStep(photoBlob, { ...DEFAULT_CROP_PARAMS }); // neues Foto: Zuschnitt startet in der Mitte
     } catch (err) {
-      photoStatus.textContent = 'Pflichtfeld';
       showError('photo', err.message);
     }
-    fileInput.value = '';
-  });
+    photoStatus.textContent = 'Pflichtfeld';
+  }
+  cameraInput.addEventListener('change', () => onFile(cameraInput));
+  libraryInput.addEventListener('change', () => onFile(libraryInput));
 
   // ---- Weintyp ----
   const typeButtons = WINE_TYPES.map((t) => h('button', {
@@ -121,7 +154,7 @@ export async function createWineForm({ config, existing, prefillPlace }) {
   async function onSubmit(e) {
     e.preventDefault();
     Object.keys(errorEls).forEach((k) => showError(k, ''));
-    const raw = { photo: state.photo, type: state.type, origin: state.origin, count: state.count, places: picker.getPlaces() };
+    const raw = { photo: state.photo, crop: state.crop, cropParams: state.cropParams, type: state.type, origin: state.origin, count: state.count, places: picker.getPlaces() };
     for (const [k, el] of Object.entries(inputs)) raw[k] = el.value;
 
     const { errors, wine } = validateWineInput(raw);
@@ -199,7 +232,7 @@ export async function createWineForm({ config, existing, prefillPlace }) {
 
   // ---- Aufbau ----
   const form = h('form', { class: 'form', novalidate: true, onsubmit: onSubmit },
-    h('div', { class: 'field' }, photoBtn, fileInput, errorEls.photo),
+    h('div', { class: 'field' }, emptyPhoto, filledPhoto, cameraInput, libraryInput, errorEls.photo),
     text('name', 'Weinname *', { placeholder: 'z. B. Barolo Cannubi' }),
     h('div', { class: 'field' },
       h('span', { class: 'field-label' }, 'Weintyp *'),
@@ -245,6 +278,7 @@ export async function createWineForm({ config, existing, prefillPlace }) {
     h('div', { class: 'form-footer' }, submitBtn));
 
   // Anfangszustand setzen
+  showPhotoState();
   selectType(state.type);
   setOrigin(state.origin);
   // Optionale Bereiche öffnen, wenn beim Bearbeiten schon etwas drinsteht

@@ -62,3 +62,21 @@ Haken setzen, wenn es klappt; sonst aufschreiben, was passiert ist.
 - [ ] (Optional) Systemdatum um mehr als 30 Tage vorstellen: Hinweis „… Tage alt“ erscheint. Danach Datum zurückstellen.
 
 Ergebnis, Version und Auffälligkeiten hier notieren:
+
+## 8. Neu in 0.5.0: runde Etikett-Bilder, Suche und Filter
+- [ ] **Update von 0.4.x ohne Datenverlust**: Banner „Neue Version verfügbar“, Aktualisieren. Alle Weine, Fotos und Plätze sind da
+- [ ] Bestehende Weine mit Foto zeigen im Regal nach kurzer Zeit einen **runden Ausschnitt** (mittig zugeschnitten)
+- [ ] Neuer Wein: Foto aufnehmen, es erscheint der Zuschnitt. Mit einem Finger verschieben, mit zwei Fingern (und Regler) vergrößern, **Übernehmen**
+- [ ] Foto ist **nicht gedreht** (Hochformat-Foto aufnehmen und prüfen)
+- [ ] „Neu aufnehmen“ im Zuschnitt öffnet die Kamera erneut; „Aus Fotos wählen“ geht ebenfalls
+- [ ] Im Regal zeigt der Platz das Etikett im Kreis mit Farbring des Weintyps; Wein ohne Foto: farbiger Kreis
+- [ ] Wein-Detail oder Bearbeiten: **Zuschnitt ändern** speichert den neuen Ausschnitt
+- [ ] Hoch- und Querformat: Kreise passen ins Raster, kein seitliches Scrollen, Tippfläche mindestens 44 px
+- [ ] Suche im Regal: Name, Weingut, Jahrgang, Region; „chateau“ findet „Château“; das ×-Zeichen löscht die Suche
+- [ ] **Filter** (Weintyp, Jahrgang, Land/Region, Zone, Jetzt trinkbar, Ohne Lagerplatz); Chips einzeln entfernen, Zurücksetzen
+- [ ] Treffer bleiben hell, andere Plätze sind abgedunkelt, oben steht die Trefferzahl; „Treffer ohne Lagerplatz“ erscheint als Liste
+- [ ] Ohne Treffer: „Kein Wein gefunden“ mit „Filter zurücksetzen“
+- [ ] Suche bleibt beim Tab-Wechsel erhalten und ist nach dem Neustart der App leer
+- [ ] **Backup**: Export, App löschen, Import: Zuschnitte sind wieder da; eine alte Backup-Datei (0.4.x) lässt sich importieren
+- [ ] Flugmodus: alles funktioniert weiter, auch nach dem Update
+

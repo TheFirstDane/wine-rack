@@ -1,7 +1,7 @@
 // Reine Logik ohne Browser-Abhängigkeiten (läuft auch in Node, siehe tests/).
 // Alles, was Weine prüft, zusammenführt oder Plätze vergibt, steht hier.
 
-import { WINE_TYPES } from './constants.js';
+import { WINE_TYPES, DEFAULT_CROP_PARAMS } from './constants.js';
 
 export const BOTTLE_SIZES = ['0,375 l', '0,5 l', '0,75 l', '1,5 l', '3 l', '6 l'];
 export const DEFAULT_BOTTLE_SIZE = '0,75 l';
@@ -103,6 +103,8 @@ export function validateWineInput(raw, { now = new Date() } = {}) {
     pairing: str(raw.pairing),
     status: 'active',
     drunkAt: null,
+    crop: raw.crop || null,
+    cropParams: raw.cropParams ? { ...raw.cropParams } : { ...DEFAULT_CROP_PARAMS },
   };
   return { errors, wine };
 }
@@ -135,7 +137,7 @@ export function findMatches(wines, candidate, { ignoreId = null } = {}) {
 export function mergeInto(existing, incoming) {
   const merged = { ...existing };
   for (const [k, v] of Object.entries(incoming)) {
-    if (['id', 'count', 'places', 'photo', 'status', 'drunkAt', 'storedAt'].includes(k)) continue;
+    if (['id', 'count', 'places', 'photo', 'crop', 'cropParams', 'status', 'drunkAt', 'storedAt'].includes(k)) continue;
     const empty = merged[k] == null || merged[k] === '';
     if (empty && v != null && v !== '') merged[k] = v;
   }
@@ -275,9 +277,15 @@ export function filterWines(wines, { query = '', type = '', country = '', window
     if (country && w.country !== country) return false;
     if (window && (drinkingStatus(w, year) ?? 'none') !== window) return false;
     if (!tokens.length) return true;
-    const hay = normalizeText([w.name, w.winery, w.country, w.region, w.grapes, w.vintage].join(' '));
-    return tokens.every((t) => hay.includes(t));
+    return matchesTokens(w, tokens);
   });
+}
+
+// Alle Suchwörter müssen in Name, Weingut, Land, Region, Rebsorten oder Jahrgang vorkommen.
+function matchesTokens(w, tokens) {
+  if (!tokens.length) return true;
+  const hay = normalizeText([w.name, w.winery, w.country, w.region, w.grapes, w.vintage].join(' '));
+  return tokens.every((t) => hay.includes(t));
 }
 
 export function sortWines(wines, key = 'name') {
@@ -301,3 +309,98 @@ export function uniqueCountries(wines) {
 // Archiv: zuletzt getrunkene zuerst
 export const sortArchive = (wines) =>
   [...wines].sort((a, b) => String(b.drunkAt || '').localeCompare(String(a.drunkAt || '')));
+
+// ---- Zuschnitt (rundes Etikett-Bild) -----------------------------------------
+
+export const MAX_CROP_ZOOM = 5;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+// Rechnet gewählte Parameter in ein Quadrat im Foto um und hält es innerhalb des Bildes.
+//   params: { cx, cy } = Mittelpunkt als Anteil von Breite/Höhe (0–1), zoom ≥ 1
+//   zoom 1 = größtmögliches Quadrat, zoom 2 = halbe Kantenlänge usw.
+// Liefert { cx, cy, zoom, side, sx, sy } (side/sx/sy in Bildpunkten).
+export function normalizeCrop(width, height, params = DEFAULT_CROP_PARAMS) {
+  const num = (v, fallback) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : fallback);
+  const zoom = clamp(num(params.zoom, 1), 1, MAX_CROP_ZOOM);
+  const side = Math.min(width, height) / zoom;
+  const cx = clamp(num(params.cx, 0.5), side / 2 / width, 1 - side / 2 / width);
+  const cy = clamp(num(params.cy, 0.5), side / 2 / height, 1 - side / 2 / height);
+  return { cx, cy, zoom, side, sx: cx * width - side / 2, sy: cy * height - side / 2 };
+}
+
+// ---- Suche und Filter im Regal ----------------------------------------------------
+
+export const EMPTY_SHELF_FILTER = {
+  query: '',
+  types: [],          // Weintypen (Mehrfachauswahl)
+  vintageFrom: '',    // Produktionsjahr von/bis (Text aus dem Eingabefeld)
+  vintageTo: '',
+  place: '',          // 'c:Italien' (Land) oder 'r:Piemont' (Region)
+  zone: '',           // 'upper' | 'lower'
+  drinkable: false,   // "Jetzt trinkbar"
+  unplaced: false,    // "Ohne Lagerplatz"
+};
+
+export const hasActiveFilter = (f) => activeFilterChips(f).length > 0 || normalizeText(f.query) !== '';
+
+// Chips für aktive Filter (ohne Suchtext): [{ key, label, value? }]
+// key sagt, welcher Filter beim Entfernen zurückgesetzt wird; value nur bei Weintypen.
+export function activeFilterChips(f) {
+  const chips = [];
+  for (const key of f.types) {
+    const t = WINE_TYPES.find((x) => x.key === key);
+    chips.push({ key: 'types', value: key, label: t ? t.label : key });
+  }
+  const from = String(f.vintageFrom ?? '').trim();
+  const to = String(f.vintageTo ?? '').trim();
+  if (from || to) chips.push({ key: 'vintage', label: from && to ? `Jahrgang ${from}–${to}` : from ? `ab ${from}` : `bis ${to}` });
+  if (f.place) chips.push({ key: 'place', label: `${f.place.startsWith('c:') ? 'Land' : 'Region'}: ${f.place.slice(2)}` });
+  if (f.zone) chips.push({ key: 'zone', label: f.zone === 'upper' ? 'Obere Zone' : 'Untere Zone' });
+  if (f.drinkable) chips.push({ key: 'drinkable', label: 'Jetzt trinkbar' });
+  if (f.unplaced) chips.push({ key: 'unplaced', label: 'Ohne Lagerplatz' });
+  return chips;
+}
+
+// Entfernt einen Chip (liefert einen neuen Filter).
+export function removeFilterChip(f, chip) {
+  const next = { ...f, types: [...f.types] };
+  if (chip.key === 'types') next.types = next.types.filter((t) => t !== chip.value);
+  else if (chip.key === 'vintage') { next.vintageFrom = ''; next.vintageTo = ''; }
+  else next[chip.key] = EMPTY_SHELF_FILTER[chip.key];
+  return next;
+}
+
+// Passt der Wein zu Suche und allen Filtern (UND-verknüpft)?
+export function matchesShelfFilter(wine, f, config, year = new Date().getFullYear()) {
+  const tokens = normalizeText(f.query).split(' ').filter(Boolean);
+  if (!matchesTokens(wine, tokens)) return false;
+  if (f.types.length && !f.types.includes(wine.type)) return false;
+
+  const from = parseNumber(f.vintageFrom);
+  const to = parseNumber(f.vintageTo);
+  if (from !== null || to !== null) {
+    if (wine.vintage == null) return false;
+    if (from !== null && wine.vintage < from) return false;
+    if (to !== null && wine.vintage > to) return false;
+  }
+
+  if (f.place) {
+    const value = f.place.slice(2);
+    if ((f.place.startsWith('c:') ? wine.country : wine.region) !== value) return false;
+  }
+
+  if (f.zone) {
+    const zoneShelves = new Set(config.shelves.filter((s) => s.zone === f.zone).map((s) => s.id));
+    if (!(wine.places || []).some((p) => zoneShelves.has(p.shelfId))) return false;
+  }
+
+  if (f.drinkable && drinkingStatus(wine, year) !== 'ready') return false;
+  if (f.unplaced && wine.count - (wine.places || []).length <= 0) return false;
+  return true;
+}
+
+// Auswahllisten für das Filterblatt aus den vorhandenen Weinen
+export function placeOptions(wines) {
+  const uniq = (key) => [...new Set(wines.map((w) => w[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+  return { countries: uniq('country'), regions: uniq('region') };
+}

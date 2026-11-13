@@ -4,7 +4,7 @@
 //            #/einlagern            #/einlagern/<fachId>/<platz>
 //            #/wein/<id>            #/wein/<id>/bearbeiten
 
-import { h } from './ui.js';
+import { h, rotateUrls } from './ui.js';
 import { openDB, getShelfConfig, getWine } from './db.js';
 import { createSetupView } from './views/setup.js';
 import { createShelfView } from './views/shelf.js';
@@ -16,6 +16,7 @@ import { createWineForm } from './views/wineform.js';
 import { backupNotice } from './views/notices.js';
 import { importFromPicker } from './backup-flow.js';
 import { initUpdates } from './update.js';
+import { ensureCrops } from './crops.js';
 
 const appEl = document.getElementById('app');
 const tabbar = document.getElementById('tabbar');
@@ -45,6 +46,16 @@ const routes = {
 async function render(hash) {
   const [name, ...args] = hash.replace(/^#\/?/, '').split('/');
   const route = routes[name] ? name : 'regal';
+  // Bild-URLs: die neue Ansicht beginnt mit leerem Pool, die der alten werden nach dem Austausch freigegeben
+  const freeOldUrls = rotateUrls();
+  try {
+    await renderView(hash, route, name, args);
+  } finally {
+    freeOldUrls();
+  }
+}
+
+async function renderView(hash, route, name, args) {
   const [view, tab] = await routes[route](routes[name] ? args : []);
   if (hash !== currentHash) return; // inzwischen woandershin navigiert
   for (const a of tabbar.querySelectorAll('a')) {
@@ -60,6 +71,7 @@ async function render(hash) {
   }
   view.classList.add('view-enter');
   appEl.replaceChildren(view);
+  view.dispatchEvent(new Event('wr:attached')); // Ansichten, die Maße brauchen (Regal), rechnen jetzt
   window.scrollTo(0, 0);
 }
 
@@ -118,6 +130,11 @@ async function boot() {
   window.addEventListener('wr:refresh', () => { currentHash = null; navigate(); });
   if (!config) showSetup(null);
   else await navigate();
+
+  // Fehlende Zuschnitt-Bilder (nach dem Update auf Datenmodell 2) im Hintergrund erzeugen
+  ensureCrops()
+    .then((n) => { if (n && (location.hash === '' || location.hash === '#/regal')) window.dispatchEvent(new Event('wr:refresh')); })
+    .catch((err) => console.warn('Zuschnitte:', err));
 }
 
 boot();

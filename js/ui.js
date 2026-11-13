@@ -76,3 +76,22 @@ export function stepper(value, min, max, onChange = () => {}) {
   el.value = value;
   return el;
 }
+
+// ---- Object-URLs für Bilder (Blobs) ---------------------------------------------------
+// blobUrl(blob) liefert pro Blob immer dieselbe URL, solange die aktuelle Ansicht lebt.
+// rotateUrls() wird beim Ansichtswechsel aufgerufen: neue Ansicht beginnt mit leerem Pool, die
+// zurückgegebene Funktion gibt die URLs der alten Ansicht frei (erst aufrufen, wenn sie ersetzt ist).
+let urlPool = new Map();
+
+export function blobUrl(blob) {
+  if (!blob) return '';
+  let url = urlPool.get(blob);
+  if (!url) { url = URL.createObjectURL(blob); urlPool.set(blob, url); }
+  return url;
+}
+
+export function rotateUrls() {
+  const old = urlPool;
+  urlPool = new Map();
+  return () => { for (const url of old.values()) URL.revokeObjectURL(url); };
+}

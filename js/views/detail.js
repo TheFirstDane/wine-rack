@@ -1,7 +1,10 @@
 // Wein-Detail: großes Foto, alle Angaben, Trinkfenster, Trinken, Bearbeiten und Löschen.
 
-import { h, toast, dialog } from '../ui.js';
-import { getWine, deleteWine } from '../db.js';
+import { h, toast, dialog, blobUrl } from '../ui.js';
+import { getWine, saveWine, deleteWine } from '../db.js';
+import { resizeImage, renderCrop } from '../image.js';
+import { openCropper } from './cropper.js';
+import { DEFAULT_CROP_PARAMS } from '../constants.js';
 import { placeLabel } from '../logic.js';
 import { photoImg, typeBadge, statusBadge, stars, fmtDate } from './wines.js';
 import { drinkWine } from './drink.js';
@@ -43,6 +46,30 @@ export async function createDetailView(config, id) {
   const placed = wine.places || [];
   const unplaced = wine.count - placed.length;
 
+  // "Zuschnitt ändern": gleicher Zuschnitt-Schritt mit dem vorhandenen Foto.
+  // "Neu aufnehmen" im Zuschnitt öffnet die Kamera und ersetzt danach Foto und Zuschnitt.
+  const cameraInput = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
+  async function changeCrop(photo = wine.photo, params = wine.cropParams || DEFAULT_CROP_PARAMS) {
+    try {
+      const res = await openCropper({ blob: photo, params });
+      if (!res) return;
+      if (res.retake) { cameraInput.click(); return; }
+      const { blob, params: finalParams } = await renderCrop(photo, res.params);
+      const current = (await getWine(wine.id)) || wine;
+      await saveWine({ ...current, photo, crop: blob, cropParams: finalParams });
+      toast('Zuschnitt gespeichert');
+      window.dispatchEvent(new Event('wr:refresh'));
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+  cameraInput.addEventListener('change', async () => {
+    const file = cameraInput.files[0];
+    cameraInput.value = '';
+    if (!file) return;
+    try { await changeCrop(await resizeImage(file), { ...DEFAULT_CROP_PARAMS }); } catch (err) { toast(err.message); }
+  });
+
   async function onDelete() {
     const ok = await dialog({
       title: 'Wein löschen?',
@@ -60,6 +87,13 @@ export async function createDetailView(config, id) {
       h('button', { class: 'back', onclick: () => history.back() }, '‹ Zurück'),
       h('h1', {}, wine.name)),
     photoImg(wine.photo, wine.name, 'detail-photo'),
+    !archived && wine.photo && h('div', { class: 'crop-row' },
+      h('img', { class: 'round-preview small', src: blobUrl(wine.crop || wine.photo), alt: 'Bild im Regal' }),
+      h('div', { class: 'crop-row-text' },
+        h('strong', {}, 'Bild im Regal'),
+        h('span', { class: 'muted small' }, 'So erscheint der Wein im Regal.')),
+      h('button', { class: 'btn', onclick: () => changeCrop() }, 'Zuschnitt ändern'),
+      cameraInput),
     h('div', { class: 'detail-badges' }, typeBadge(wine.type),
       archived ? h('span', { class: 'status archived' }, 'Getrunken') : statusBadge(wine)),
 

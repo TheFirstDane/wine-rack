@@ -1,7 +1,7 @@
 // Weinliste mit Suche, Filtern (Typ, Land, Trinkfenster) und Sortierung.
 // Außerdem gemeinsame Bausteine für Karten, die auch Archiv und Detail nutzen.
 
-import { h } from '../ui.js';
+import { h, blobUrl } from '../ui.js';
 import { getAllWines } from '../db.js';
 import { WINE_TYPES } from '../constants.js';
 import { drinkingStatus, filterWines, sortWines, uniqueCountries, WINDOW_OPTIONS, SORT_OPTIONS } from '../logic.js';
@@ -19,10 +19,10 @@ export const fmtDate = (iso) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateS
 // "★★★☆☆" für eine Bewertung von 0–5
 export const stars = (n) => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
 
-// Kleiner Helfer: Blob → Bild-Element
+// Kleiner Helfer: Blob → Bild-Element (die URL wird mit der Ansicht wieder freigegeben, siehe ui.js)
 export function photoImg(blob, alt, cls = '') {
   const img = h('img', { class: cls, alt, loading: 'lazy' });
-  if (blob) img.src = URL.createObjectURL(blob);
+  if (blob) img.src = blobUrl(blob);
   return img;
 }
 

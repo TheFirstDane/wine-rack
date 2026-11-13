@@ -36,7 +36,11 @@ export function dataURLToBlob(url) {
 export async function createBackup({ wines, shelfConfig, appVersion, now = new Date() }) {
   const out = [];
   for (const w of wines) {
-    out.push({ ...w, photo: w.photo ? await blobToDataURL(w.photo) : null });
+    out.push({
+      ...w,
+      photo: w.photo ? await blobToDataURL(w.photo) : null,
+      crop: w.crop ? await blobToDataURL(w.crop) : null,
+    });
   }
   return {
     format: BACKUP_FORMAT,
@@ -74,6 +78,7 @@ function checkWine(w, config) {
   if (!Number.isInteger(w.count) || w.count < 0) return `Wein ${label} hat eine ungültige Anzahl.`;
   if (w.status !== 'active' && w.status !== 'archived') return `Wein ${label} hat einen ungültigen Status.`;
   if (w.photo != null && (typeof w.photo !== 'string' || !w.photo.startsWith('data:image/'))) return `Das Foto von ${label} ist ungültig.`;
+  if (w.crop != null && (typeof w.crop !== 'string' || !w.crop.startsWith('data:image/'))) return `Der Bildausschnitt von ${label} ist ungültig.`;
   if (!Array.isArray(w.places)) return `Wein ${label} hat ungültige Lagerplätze.`;
   const seen = new Set();
   for (const p of w.places) {
@@ -117,7 +122,11 @@ export function parseBackup(text) {
   try {
     const wines = data.wines.map((w) => {
       const { id, ...rest } = w; // Neue ids vergibt die Datenbank
-      return { ...rest, photo: w.photo ? dataURLToBlob(w.photo) : null };
+      return {
+        ...rest,
+        photo: w.photo ? dataURLToBlob(w.photo) : null,
+        crop: w.crop ? dataURLToBlob(w.crop) : null,
+      };
     });
     return {
       ok: true,
